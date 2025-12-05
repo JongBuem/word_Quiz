@@ -1,30 +1,19 @@
-/* ---------------------------------------
+/* ============================================================
    전역 상태
-----------------------------------------*/
-let wordList = []; // { word: "", types: { n:[], v:[], adj:[], adv:[], phr:[] } }
+============================================================ */
+let wordList = []; // [{ word:"", types:{ n:[], v:[], adj:[], adv:[], phr:[] } }]
 let quizList = [];
 let quizIndex = 0;
 let resultLog = [];
 
-let quizMode = "single"; // 입력 방식: single | byType
-let judgeMode = "all"; // 정답 정책: all | any
+// 옵션 (기본값)
+let quizMode = "single"; // single | byType
+let judgeMode = "all"; // all | any
 let quizAmount = "1"; // 1 | 10 | all
 
-/* ---------------------------------------
-   테마 전환
-----------------------------------------*/
-const themeBtn = document.getElementById("themeToggle");
-
-themeBtn.onclick = () => {
-  document.body.classList.toggle("dark");
-  themeBtn.textContent = document.body.classList.contains("dark")
-    ? "☀️ 라이트"
-    : "🌙 다크";
-};
-
-/* ---------------------------------------
-   normalize
-----------------------------------------*/
+/* ============================================================
+   Utility
+============================================================ */
 function normalize(str) {
   return str
     .trim()
@@ -33,216 +22,155 @@ function normalize(str) {
     .toLowerCase();
 }
 
-/* ---------------------------------------
-   단어 UI 렌더링 (옵션 저장/불러오기 포함)
-----------------------------------------*/
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+/* ============================================================
+   저장 / 로드
+============================================================ */
+function saveWords() {
+  localStorage.setItem("wordListPWA", JSON.stringify(wordList));
+}
+function loadWords() {
+  const raw = localStorage.getItem("wordListPWA");
+  if (raw) wordList = JSON.parse(raw);
+}
+
+function saveOptions() {
+  localStorage.setItem("quizMode", quizMode);
+  localStorage.setItem("judgeMode", judgeMode);
+  localStorage.setItem("quizAmount", quizAmount);
+}
+function loadOptions() {
+  const m = localStorage.getItem("quizMode");
+  const j = localStorage.getItem("judgeMode");
+  const a = localStorage.getItem("quizAmount");
+
+  if (m) quizMode = m;
+  if (j) judgeMode = j;
+  if (a) quizAmount = a;
+}
+
+/* ============================================================
+   기본 화면 (단어 생성기)
+============================================================ */
 function renderBuilder() {
-  /* 🔵 저장된 퀴즈 옵션 불러오기 */
-  const savedMode = localStorage.getItem("quizModeSaved");
-  const savedJudge = localStorage.getItem("judgeModeSaved");
-  const savedAmount = localStorage.getItem("quizAmountSaved");
+  loadOptions();
 
-  if (savedMode) quizMode = savedMode;
-  if (savedJudge) judgeMode = savedJudge;
-  if (savedAmount) quizAmount = savedAmount;
-
-  /* 🔵 UI 렌더링 */
   document.getElementById("app").innerHTML = `
     <h2>단어 입력</h2>
 
-    <div class="option-group">
-      <label class="option-title">단어</label>
-      <input id="wordInput">
-    </div>
-
-    <div class="option-group">
-      <label class="option-title">명사 (n)</label>
-      <input id="nInput">
-    </div>
-
-    <div class="option-group">
-      <label class="option-title">동사 (v)</label>
-      <input id="vInput">
-    </div>
-
-    <div class="option-group">
-      <label class="option-title">형용사 (adj)</label>
-      <input id="adjInput">
-    </div>
-
-    <div class="option-group">
-      <label class="option-title">부사 (adv)</label>
-      <input id="advInput">
-    </div>
-
-    <div class="option-group">
-      <label class="option-title">구동사/숙어 (phr)</label>
-      <input id="phrInput">
-    </div>
+    <div class="option-group"><label>단어</label><input id="w_word"></div>
+    <div class="option-group"><label>명사(n)</label><input id="w_n"></div>
+    <div class="option-group"><label>동사(v)</label><input id="w_v"></div>
+    <div class="option-group"><label>형용사(adj)</label><input id="w_adj"></div>
+    <div class="option-group"><label>부사(adv)</label><input id="w_adv"></div>
+    <div class="option-group"><label>숙어(phr)</label><input id="w_phr"></div>
 
     <button id="addWordBtn">단어 추가</button>
-
     <hr>
 
     <h2>단어 리스트</h2>
-    <div id="wordTableBox"></div>
-
+    <div id="wordTable"></div>
     <button id="clearWordsBtn" style="background:#d9534f">전체 삭제</button>
-
-    <hr>
-
-    <h2>JSON Export / Import</h2>
-
-    <div class="option-group">
-      <label class="option-title">JSON Export</label>
-      <textarea id="jsonOut" style="height:160px"></textarea>
-      <button id="copyJsonBtn">JSON 복사</button>
-    </div>
-
-    <div class="option-group">
-      <label class="option-title">JSON Import</label>
-      <textarea id="jsonIn" style="height:160px"></textarea>
-      <button id="importJsonBtn">JSON 반영</button>
-    </div>
-
     <hr>
 
     <h2>퀴즈 옵션</h2>
 
-    <!-- 문제 수 -->
     <div class="option-group">
-      <div class="option-title">문제 수</div>
-      <select id="quizAmountSel">
+      <label>문제 수</label>
+      <select id="op_amount">
         <option value="1">1문제씩</option>
         <option value="10">10문제씩</option>
         <option value="all">전체 문제</option>
       </select>
     </div>
 
-    <!-- 입력 방식 -->
     <div class="option-group">
-      <div class="option-title">입력 방식</div>
-      
-      <label class="option-item">
-        <input type="radio" name="mode" value="single">
-        입력창 1개
-      </label>
-
-      <label class="option-item">
-        <input class="option-input" type="radio" name="mode" value="byType">
-        품사별 입력창
-      </label>
+      <label  class="option-title">입력 방식</label>
+      <label class="option-item"><input class="option-input" type="radio" name="op_mode" value="single"> 입력창 1개</label>
+      <label class="option-item"><input class="option-input" type="radio" name="op_mode" value="byType"> 품사별 입력창</label>
     </div>
 
-    <!-- 정답 정책 -->
     <div class="option-group">
-      <div class="option-title">정답 정책</div>
-
-      <label class="option-item">
-        <input class="option-input" type="radio" name="judge" value="all">
-        입력한 모든 뜻이 정답일 때 정답
-      </label>
-
-      <label class="option-item">
-        <input class="option-input" type="radio" name="judge" value="any">
-        입력한 답 중 하나라도 맞으면 정답
-        <br><small style="color:var(--text-light)">※ 틀린 답 포함 시 오답</small>
-      </label>
+      <label  class="option-title">정답 정책</label>
+      <label class="option-item"><input class="option-input" type="radio" name="op_judge" value="all"> 입력한 모든 뜻이 정답일 때 정답</label>
+      <label class="option-item"><input class="option-input" type="radio" name="op_judge" value="any"> 입력한 답 중 하나라도 맞으면 정답 (틀린 답 포함 시 오답)</label>
     </div>
 
-    <button id="startQuizBtn" style="margin-top:20px">👉 퀴즈 시작</button>
+    <button id="startQuizBtn" style="margin-top:14px">👉 퀴즈 시작</button>
   `;
 
-  /* 🔵 불러온 옵션을 UI에 반영 */
-  document.getElementById("quizAmountSel").value = quizAmount;
-
-  const modeEl = document.querySelector(
-    `input[name="mode"][value="${quizMode}"]`
-  );
-  if (modeEl) modeEl.checked = true;
-
-  const judgeEl = document.querySelector(
-    `input[name="judge"][value="${judgeMode}"]`
-  );
-  if (judgeEl) judgeEl.checked = true;
-
-  /* 🔵 기존 기능 그대로 유지 */
   renderWordTable();
-  renderJSON();
 
+  // 옵션 UI 반영
+  document.getElementById("op_amount").value = quizAmount;
+  document.querySelector(
+    `input[name="op_mode"][value="${quizMode}"]`
+  ).checked = true;
+  document.querySelector(
+    `input[name="op_judge"][value="${judgeMode}"]`
+  ).checked = true;
+
+  // 이벤트 바인딩
   document.getElementById("addWordBtn").onclick = addWord;
   document.getElementById("clearWordsBtn").onclick = clearWords;
-  document.getElementById("copyJsonBtn").onclick = copyJSON;
-  document.getElementById("importJsonBtn").onclick = importJSON;
+
   document.getElementById("startQuizBtn").onclick = startQuiz;
 
-  /* 🔵 옵션 바꿀 때마다 저장 */
-  document.getElementById("quizAmountSel").onchange = (e) => {
+  document.getElementById("op_amount").onchange = (e) => {
     quizAmount = e.target.value;
-    localStorage.setItem("quizAmountSaved", quizAmount);
+    saveOptions();
   };
 
-  document.querySelectorAll("input[name='mode']").forEach((r) => {
+  document.querySelectorAll(`input[name="op_mode"]`).forEach((r) => {
     r.onchange = () => {
       quizMode = r.value;
-      localStorage.setItem("quizModeSaved", quizMode);
+      saveOptions();
     };
   });
 
-  document.querySelectorAll("input[name='judge']").forEach((r) => {
+  document.querySelectorAll(`input[name="op_judge"]`).forEach((r) => {
     r.onchange = () => {
       judgeMode = r.value;
-      localStorage.setItem("judgeModeSaved", judgeMode);
+      saveOptions();
     };
   });
 }
 
-/* ---------------------------------------
+/* ============================================================
    단어 추가
-----------------------------------------*/
+============================================================ */
 function addWord() {
-  const word = document.getElementById("wordInput").value.trim();
-  const n = document.getElementById("nInput").value.trim();
-  const v = document.getElementById("vInput").value.trim();
-  const adj = document.getElementById("adjInput").value.trim();
-  const adv = document.getElementById("advInput").value.trim();
-  const phr = document.getElementById("phrInput").value.trim();
+  const word = document.getElementById("w_word").value.trim();
+  if (!word) return alert("단어를 입력하세요.");
 
-  if (!word) {
-    alert("단어를 입력해주세요.");
-    return;
-  }
+  const entry = { word, types: {} };
 
-  const entry = {
-    word,
-    types: {},
-  };
-
-  // 품사별 입력 처리
-  const pushTypes = (raw, type) => {
+  const push = (raw, t) => {
     if (!raw) return;
     const list = raw
       .split(",")
-      .map((x) => x.trim())
-      .filter((x) => x);
-    if (list.length > 0) entry.types[type] = list;
+      .map((v) => v.trim())
+      .filter((v) => v);
+    if (list.length) entry.types[t] = list;
   };
 
-  pushTypes(n, "n");
-  pushTypes(v, "v");
-  pushTypes(adj, "adj");
-  pushTypes(adv, "adv");
-  pushTypes(phr, "phr");
+  push(document.getElementById("w_n").value, "n");
+  push(document.getElementById("w_v").value, "v");
+  push(document.getElementById("w_adj").value, "adj");
+  push(document.getElementById("w_adv").value, "adv");
+  push(document.getElementById("w_phr").value, "phr");
 
-  if (Object.keys(entry.types).length === 0) {
-    alert("뜻을 1개 이상 입력해주세요.");
-    return;
-  }
+  if (Object.keys(entry.types).length === 0)
+    return alert("뜻을 1개 이상 입력하세요.");
 
-  // 동일 단어 이미 있는지 체크
   const exist = wordList.find((w) => w.word === word);
   if (exist) {
-    // 기존 품사와 병합
     for (const t in entry.types) {
       if (!exist.types[t]) exist.types[t] = [];
       exist.types[t].push(...entry.types[t]);
@@ -252,327 +180,310 @@ function addWord() {
   }
 
   saveWords();
-  renderWordTable();
-  renderJSON();
-
-  // 입력창 초기화
-  document.getElementById("wordInput").value = "";
-  document.getElementById("nInput").value = "";
-  document.getElementById("vInput").value = "";
-  document.getElementById("adjInput").value = "";
-  document.getElementById("advInput").value = "";
-  document.getElementById("phrInput").value = "";
+  renderBuilder();
 }
 
-/* ---------------------------------------
-   단어 리스트 표 렌더링
-----------------------------------------*/
+/* ============================================================
+   단어 리스트 렌더링
+============================================================ */
 function renderWordTable() {
   let html = `
     <table>
-      <tr>
-        <th>단어</th>
-        <th>품사/뜻</th>
-      </tr>
+      <tr><th>단어</th><th>품사/뜻</th></tr>
   `;
 
   wordList.forEach((w) => {
-    let typeHTML = "";
-    for (const type in w.types) {
-      typeHTML += `<b>[${type}]</b> ${w.types[type].join(", ")}<br>`;
+    let tHTML = "";
+    for (const t in w.types) {
+      tHTML += `<b>[${t}]</b> ${w.types[t].join(", ")}<br>`;
     }
-
     html += `
-      <tr>
-        <td>${w.word}</td>
-        <td>${typeHTML}</td>
-      </tr>
-    `;
+    <tr>
+      <td>${w.word}</td>
+      <td>${tHTML}</td>
+    </tr>`;
   });
 
   html += "</table>";
-
-  document.getElementById("wordTableBox").innerHTML = html;
+  document.getElementById("wordTable").innerHTML = html;
 }
 
-/* ---------------------------------------
-   JSON Export
-----------------------------------------*/
-function renderJSON() {
-  document.getElementById("jsonOut").value = JSON.stringify(wordList, null, 2);
-}
-
-function copyJSON() {
-  navigator.clipboard.writeText(document.getElementById("jsonOut").value);
-  alert("복사되었습니다!");
-}
-
-/* ---------------------------------------
-   JSON Import
-----------------------------------------*/
-function importJSON() {
-  try {
-    const raw = document.getElementById("jsonIn").value.trim();
-    const arr = JSON.parse(raw);
-
-    if (!Array.isArray(arr)) throw "not array";
-
-    wordList = arr;
-    saveWords();
-    renderWordTable();
-    renderJSON();
-    alert("반영 완료!");
-  } catch (e) {
-    alert("JSON 형식이 잘못되었습니다.");
-  }
-}
-
-/* ---------------------------------------
-   단어 전체 삭제
-----------------------------------------*/
+/* ============================================================
+   전체 삭제
+============================================================ */
 function clearWords() {
-  if (!confirm("정말 전체 삭제할까요?")) return;
+  if (!confirm("정말 삭제?")) return;
   wordList = [];
   saveWords();
-  renderWordTable();
-  renderJSON();
+  renderBuilder();
 }
 
-/* ---------------------------------------
-   LocalStorage 저장/로드
-----------------------------------------*/
-function saveWords() {
-  localStorage.setItem("wordListPWA", JSON.stringify(wordList));
-}
-
-function loadWords() {
-  const saved = localStorage.getItem("wordListPWA");
-  if (saved) {
-    wordList = JSON.parse(saved);
-  }
-}
-
-/* 초기 실행 */
-loadWords();
-renderBuilder();
-
-/* ---------------------------------------
-   Fisher-Yates Shuffle
-----------------------------------------*/
-function shuffle(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-}
-
-/* ---------------------------------------
+/* ============================================================
    퀴즈 시작
-----------------------------------------*/
+============================================================ */
 function startQuiz() {
-  saveQuizOptions();
-  if (wordList.length === 0) {
-    alert("단어가 없습니다!");
-    return;
-  }
+  if (wordList.length === 0) return alert("단어 없음");
 
-  quizAmount = document.getElementById("quizAmountSel").value;
-
-  // 최신 JSON 반영
-  saveWords();
-
-  // 문제 리스트 구성
   quizList = [...wordList];
   shuffle(quizList);
 
   quizIndex = 0;
   resultLog = [];
 
-  if (quizAmount === "1") {
-    startSingleMode();
-  } else {
-    startSetMode();
-  }
+  if (quizAmount === "1") startSingle();
+  else startSet();
 }
 
-function saveQuizOptions() {
-  localStorage.setItem("quizModeSaved", quizMode);
-  localStorage.setItem("judgeModeSaved", judgeMode);
-  localStorage.setItem("quizAmountSaved", quizAmount);
-}
-
-/* ---------------------------------------
-   단일 문제 모드 시작
-----------------------------------------*/
-function startSingleMode() {
+/* ============================================================
+   단일 문제 모드
+============================================================ */
+function startSingle() {
   const q = quizList[quizIndex];
   renderSingleQuestion(q);
 }
 
-/* ---------------------------------------
-   단일 문제 화면 렌더링
-----------------------------------------*/
 function renderSingleQuestion(q) {
-  let typeHTML = Object.keys(q.types)
-    .map((t) => `<b>[${t}]</b>`)
-    .join(" ");
-
   document.getElementById("app").innerHTML = `
-    <h2>단일 문제 모드</h2>
-
-    <div style="font-size:20px; margin-bottom:10px;">
-      <b>${q.word}</b> <span style="color:#888">${typeHTML}</span>
-    </div>
-
+    <h2>단일 문제</h2>
+    <div><b>${q.word}</b></div>
     <div id="answerBox"></div>
 
-    <button id="checkSingleBtn">정답 확인</button>
-    <div id="singleResult" style="margin-top:12px;font-weight:bold"></div>
-
-    <button id="nextSingleBtn" class="hidden" style="margin-top:12px">다음 문제 →</button>
+    <button id="btnCheck">정답 확인</button>
+    <div id="resultArea" style="margin-top:10px;"></div>
+    <button id="btnNext" class="hidden" style="margin-top:10px">다음 문제 →</button>
 
     <hr>
-    <button id="backBtn">← 단어 생성기로 돌아가기</button>
+    <button id="btnBack">← 돌아가기</button>
   `;
 
-  // 입력창 렌더링
-  renderSingleInputs(q);
+  renderSingleInputUI(q);
 
-  document.getElementById("checkSingleBtn").onclick = () =>
-    checkSingleAnswer(q);
+  document.getElementById("btnCheck").onclick = () => checkSingle(q);
+  document.getElementById("btnNext").onclick = nextSingle;
+  document.getElementById("btnBack").onclick = renderBuilder;
 
-  document.getElementById("nextSingleBtn").onclick = () => {
-    quizIndex++;
-    if (quizIndex >= quizList.length) {
-      showFinalSummary();
-    } else {
-      renderSingleQuestion(quizList[quizIndex]);
+  document.onkeydown = (e) => {
+    if (e.key === "Enter") {
+      const nextBtn = document.getElementById("btnNext");
+      if (!nextBtn.classList.contains("hidden")) nextBtn.click();
+      else document.getElementById("btnCheck").click();
     }
-  };
-
-  document.getElementById("backBtn").onclick = renderBuilder;
-
-  // 엔터키 처리
-  document.onkeydown = function (e) {
-    if (e.key !== "Enter") return;
-
-    const nextBtn = document.getElementById("nextSingleBtn");
-    if (!nextBtn.classList.contains("hidden")) nextBtn.click();
-    else document.getElementById("checkSingleBtn").click();
   };
 }
 
-/* ---------------------------------------
-   단일 문제 입력창 그리기
-----------------------------------------*/
-function renderSingleInputs(q) {
+function renderSingleInputUI(q) {
   const box = document.getElementById("answerBox");
   box.innerHTML = "";
 
   if (quizMode === "single") {
-    box.innerHTML = `<input id="singleInput" placeholder="뜻을 입력하세요 (여러 개는 콤마)">`;
-    document.getElementById("singleInput").focus();
-    return;
+    box.innerHTML = `<input id="singleAns">`;
+    document.getElementById("singleAns").focus();
+  } else {
+    for (const t in q.types) {
+      box.innerHTML += `
+        <div><b>[${t}]</b> <input id="ans_${t}"></div>
+      `;
+    }
+    box.querySelector("input").focus();
   }
-
-  // 품사별 입력 모드
-  for (const t in q.types) {
-    const labelMap = {
-      n: "명사",
-      v: "동사",
-      adj: "형용사",
-      adv: "부사",
-      phr: "숙어",
-    };
-
-    const div = document.createElement("div");
-    div.style.marginBottom = "6px";
-    div.innerHTML = `
-      <b>[${t}]</b>
-      <input id="input_${t}" placeholder="${labelMap[t]} 뜻 입력 (콤마 가능)">
-    `;
-    box.appendChild(div);
-  }
-
-  const first = box.querySelector("input");
-  if (first) first.focus();
 }
 
-/* ---------------------------------------
-   단일 문제 정답 체크 (패치버전)
-----------------------------------------*/
-function checkSingleAnswer(q) {
-  let isCorrect = false;
-  let raw = "";
+function checkSingle(q) {
+  const btn = document.getElementById("btnCheck");
+  btn.classList.add("hidden"); // 중복 채점 방지
+
+  let userRaw = {};
+  let userNorm = {};
 
   if (quizMode === "single") {
-    // 입력창 1개 모드
-    const inputBox = document.getElementById("singleInput");
-    if (!inputBox) return;
+    const raw = document.getElementById("singleAns").value.trim();
+    userRaw.single = raw;
 
-    raw = inputBox.value.trim();
-
-    const userParts = raw
+    userNorm = raw
       .split(",")
       .map((x) => normalize(x))
       .filter((x) => x);
 
-    isCorrect = judgeAnswer(userParts, q.types, false);
-
-    // 엔터 중복 방지
-    inputBox.blur();
+    const ok = judgeAnswer(userNorm, q.types, false);
+    storeAndShowSingleResult(q, ok, userRaw);
   } else {
-    // 품사별 입력 모드
-    let perType = {};
-    let hasAny = false;
-
     for (const t in q.types) {
-      const el = document.getElementById(`input_${t}`);
-      if (!el) continue;
+      const raw = document.getElementById(`ans_${t}`).value.trim();
+      userRaw[t] = raw;
 
-      const rawVal = el.value.trim();
-      const parts = rawVal
+      userNorm[t] = raw
         .split(",")
         .map((x) => normalize(x))
         .filter((x) => x);
-
-      perType[t] = parts;
-      if (parts.length > 0) hasAny = true;
     }
-
-    // 아무 뜻도 입력 안했으면 오답
-    if (!hasAny && judgeMode === "all") {
-      isCorrect = false;
-      raw = "(입력 없음)";
-    } else {
-      isCorrect = judgeAnswer(perType, q.types, true);
-      raw = "(품사별 입력)";
-    }
+    const ok = judgeAnswer(userNorm, q.types, true);
+    storeAndShowSingleResult(q, ok, userRaw);
   }
-
-  // 결과 표시
-  showSingleResult(isCorrect, q, raw);
 }
 
-/* ---------------------------------------
-   정답 판정 엔진
-   - singleMode → normalized list 전달
-   - byTypeMode → { n:[], v:[], ... } 전달
-----------------------------------------*/
-function judgeAnswer(user, correctTypes, isByType = false) {
-  // 🌟 ALL 모드 - 빈 입력이면 자동 오답 처리
-  if (judgeMode === "all") {
-    if (isByType) {
-      // 품사별 입력에서 하나도 안 적은 경우
-      const hasAny = Object.values(user).some((list) => list.length > 0);
-      if (!hasAny) return false;
-    } else {
-      // 입력창 1개 모드에서 아무 입력 없음
-      if (user.length === 0) return false;
-    }
-  }
+function storeAndShowSingleResult(q, ok, userRaw) {
+  const resultArea = document.getElementById("resultArea");
 
-  const isCorrectTypeGroup = (userList, correctList) => {
+  let correctHTML = "";
+  for (const t in q.types) correctHTML += `[${t}] ${q.types[t].join(", ")}<br>`;
+
+  resultLog.push({
+    word: q.word,
+    types: q.types,
+    user: userRaw,
+    correct: ok,
+  });
+
+  resultArea.innerHTML = ok
+    ? `<span style="color:green">정답!</span>`
+    : `<span style="color:red">오답!</span><br>${correctHTML}`;
+
+  document.getElementById("btnNext").classList.remove("hidden");
+}
+
+function nextSingle() {
+  quizIndex++;
+  if (quizIndex >= quizList.length) showFinal();
+  else startSingle();
+}
+
+/* ============================================================
+   세트 문제 모드
+============================================================ */
+function startSet() {
+  renderSetUI();
+}
+
+function renderSetUI() {
+  const size = quizAmount === "10" ? 10 : quizList.length;
+
+  const start = quizIndex;
+  const end = Math.min(start + size, quizList.length);
+  const set = quizList.slice(start, end);
+
+  let html = `
+    <h2>세트 문제 (${set.length})</h2>
+    <table>
+      <tr><th>#</th><th>단어</th><th>품사</th><th>입력</th></tr>
+  `;
+
+  set.forEach((q, i) => {
+    const idx = start + i + 1;
+
+    let inputFields = "";
+    if (quizMode === "single") {
+      inputFields = `<input id="set_${idx}">`;
+    } else {
+      for (const t in q.types) {
+        inputFields += `
+          <div><b>[${t}]</b> <input id="set_${idx}_${t}"></div>
+        `;
+      }
+    }
+
+    html += `
+      <tr>
+        <td>${idx}</td>
+        <td>${q.word}</td>
+        <td>${Object.keys(q.types).join(", ")}</td>
+        <td>${inputFields}</td>
+      </tr>
+    `;
+  });
+
+  html += `</table>
+    <button id="btnSetCheck">정답 확인</button>
+    <button id="btnSetNext" class="hidden" style="margin-left:10px">다음 세트 →</button>
+
+    <div id="setResult" style="margin-top:20px"></div>
+    <hr>
+    <button id="btnBack">← 돌아가기</button>
+  `;
+
+  document.getElementById("app").innerHTML = html;
+
+  document.getElementById("btnSetCheck").onclick = () => checkSet(set, start);
+  document.getElementById("btnSetNext").onclick = () => {
+    quizIndex += size;
+    if (quizIndex >= quizList.length) showFinal();
+    else renderSetUI();
+  };
+  document.getElementById("btnBack").onclick = renderBuilder;
+}
+
+function checkSet(set, startIdx) {
+  let html = `
+    <h3>정답 확인</h3>
+    <table>
+      <tr><th>단어</th><th>정답</th><th>내 답</th><th>결과</th></tr>
+  `;
+
+  set.forEach((q, i) => {
+    const idx = startIdx + i + 1;
+
+    let userRaw = {};
+    let userNorm = {};
+
+    if (quizMode === "single") {
+      const raw = document.getElementById(`set_${idx}`).value.trim();
+      userRaw.single = raw;
+
+      userNorm = raw
+        .split(",")
+        .map((v) => normalize(v))
+        .filter((v) => v);
+
+      var ok = judgeAnswer(userNorm, q.types, false);
+    } else {
+      for (const t in q.types) {
+        const raw = document.getElementById(`set_${idx}_${t}`).value.trim();
+        userRaw[t] = raw;
+
+        userNorm[t] = raw
+          .split(",")
+          .map((v) => normalize(v))
+          .filter((v) => v);
+      }
+
+      var ok = judgeAnswer(userNorm, q.types, true);
+    }
+
+    resultLog.push({
+      word: q.word,
+      types: q.types,
+      user: userRaw,
+      correct: ok,
+    });
+
+    let correctHTML = "";
+    for (const t in q.types)
+      correctHTML += `[${t}] ${q.types[t].join(", ")}<br>`;
+
+    let userHTML = "";
+    for (const t in userRaw) userHTML += `<b>[${t}]</b> ${userRaw[t]}<br>`;
+
+    html += `
+      <tr>
+        <td>${q.word}</td>
+        <td>${correctHTML}</td>
+        <td>${userHTML}</td>
+        <td>${ok ? "⭕" : "❌"}</td>
+      </tr>
+    `;
+  });
+
+  html += `</table>`;
+  document.getElementById("setResult").innerHTML = html;
+
+  document.getElementById("btnSetCheck").classList.add("hidden");
+  document.getElementById("btnSetNext").classList.remove("hidden");
+}
+
+/* ============================================================
+   정답 판정 모듈 (core)
+============================================================ */
+function judgeAnswer(user, correctTypes, isByType) {
+  const check = (userList, correctList) => {
     if (judgeMode === "all") {
       return userList.every((u) => correctList.includes(u));
     } else {
@@ -582,267 +493,44 @@ function judgeAnswer(user, correctTypes, isByType = false) {
     }
   };
 
-  let totalCorrect = true;
-
   if (!isByType) {
-    // 입력창 1개 모드
     let merged = [];
-    for (const t in correctTypes) {
-      merged.push(...correctTypes[t].map((x) => normalize(x)));
-    }
-    return isCorrectTypeGroup(user, merged);
+    for (const t in correctTypes)
+      merged.push(...correctTypes[t].map((v) => normalize(v)));
+
+    return check(user, merged);
   }
 
-  // 품사별 입력창 모드
   for (const t in correctTypes) {
-    const correctList = correctTypes[t].map((x) => normalize(x));
+    const correct = correctTypes[t].map((v) => normalize(v));
     const userList = user[t] || [];
 
-    const ok = isCorrectTypeGroup(userList, correctList);
-    if (!ok) totalCorrect = false;
+    if (!check(userList, correct)) return false;
   }
-
-  return totalCorrect;
+  return true;
 }
 
-/* ---------------------------------------
-   단일 문제 정답 출력
-----------------------------------------*/
-function showSingleResult(isCorrect, q, userAns) {
-  const resultArea = document.getElementById("singleResult");
-
-  // 정답 포맷
-  let correctHTML = "";
-  for (const t in q.types) {
-    correctHTML += `[${t}] ${q.types[t].join(", ")}<br>`;
-  }
-
-  resultLog.push({
-    word: q.word,
-    types: q.types,
-    user: userAns,
-    correct: isCorrect,
-  });
-
-  resultArea.innerHTML = isCorrect
-    ? `<span style="color:green">정답!</span>`
-    : `<span style="color:red">오답!</span><br><br>정답:<br>${correctHTML}`;
-
-  document.getElementById("nextSingleBtn").classList.remove("hidden");
-}
-
-/* ---------------------------------------
-   세트 모드 시작 (10문제씩 or 전체)
-----------------------------------------*/
-function startSetMode() {
-  renderSetQuestions();
-}
-
-/* ---------------------------------------
-   세트 문제 화면 렌더링
-----------------------------------------*/
-function renderSetQuestions() {
-  const setSize = quizAmount === "10" ? 10 : quizList.length;
-
-  const start = quizIndex;
-  const end = Math.min(start + setSize, quizList.length);
-  const currentSet = quizList.slice(start, end);
-
-  let html = `
-    <h2>세트 문제 모드</h2>
-    <h3>${Math.floor(start / setSize) + 1}세트 (${currentSet.length} 문제)</h3>
-
-    <table>
-      <tr>
-        <th>#</th>
-        <th>단어</th>
-        <th>품사</th>
-        <th>입력</th>
-      </tr>
-  `;
-
-  currentSet.forEach((q, i) => {
-    const idx = start + i + 1;
-    const typeList = Object.keys(q.types).join(", ");
-
-    // 입력창 생성
-    let inputField = "";
-
-    if (quizMode === "single") {
-      inputField = `<input id="set_${idx}" placeholder="뜻 입력 (콤마 가능)">`;
-    } else {
-      // 품사별 입력창
-      inputField = "";
-      for (const t in q.types) {
-        const labelMap = {
-          n: "명사",
-          v: "동사",
-          adj: "형용사",
-          adv: "부사",
-          phr: "숙어",
-        };
-        inputField += `
-          <div style="margin-bottom:6px;">
-            <b>[${t}]</b>
-            <input id="set_${idx}_${t}" placeholder="${labelMap[t]} (콤마 가능)">
-          </div>
-        `;
-      }
-    }
-
-    html += `
-      <tr>
-        <td>${idx}</td>
-        <td>${q.word}</td>
-        <td>${typeList}</td>
-        <td>${inputField}</td>
-      </tr>
-    `;
-  });
-
-  html += `</table>
-    <button id="checkSetBtn" style="margin-top:14px;">정답 확인</button>
-    <button id="nextSetBtn" class="hidden" style="margin-top:14px;">다음 세트 →</button>
-
-    <div id="setResult" style="margin-top:20px;"></div>
-
-    <hr>
-    <button id="backBtn">← 단어 생성기로 돌아가기</button>
-  `;
-
-  document.getElementById("app").innerHTML = html;
-
-  document.getElementById("checkSetBtn").onclick = () =>
-    checkSetAnswers(currentSet, start);
-  document.getElementById("nextSetBtn").onclick = nextSet;
-  document.getElementById("backBtn").onclick = renderBuilder;
-
-  document.onkeydown = null; // 세트 모드에서는 엔터 자동 동작 안 함.
-}
-
-/* ---------------------------------------
-   세트 정답 체크
-----------------------------------------*/
-function checkSetAnswers(currentSet, startIdx) {
-  let html = `
-    <h3>정답 확인</h3>
-    <table>
-      <tr>
-        <th>단어</th>
-        <th>품사별 정답</th>
-        <th>내 답</th>
-        <th>결과</th>
-      </tr>
-  `;
-
-  currentSet.forEach((q, i) => {
-    const idx = startIdx + i + 1;
-
-    let userAns = {};
-    let isCorrect = true;
-
-    if (quizMode === "single") {
-      const raw = document.getElementById(`set_${idx}`).value.trim();
-      const normalized = raw
-        .split(",")
-        .map((x) => normalize(x))
-        .filter((x) => x);
-
-      userAns.single = raw;
-
-      isCorrect = judgeAnswer(normalized, q.types);
-    } else {
-      let perType = {};
-      for (const t in q.types) {
-        const raw = document.getElementById(`set_${idx}_${t}`).value.trim();
-        const list = raw
-          .split(",")
-          .map((x) => normalize(x))
-          .filter((x) => x);
-        perType[t] = list;
-        userAns[t] = raw;
-      }
-      isCorrect = judgeAnswer(perType, q.types, true);
-    }
-
-    resultLog.push({
-      word: q.word,
-      types: q.types,
-      user: userAns,
-      correct: isCorrect,
-    });
-
-    let correctHTML = "";
-    for (const t in q.types) {
-      correctHTML += `[${t}] ${q.types[t].join(", ")}<br>`;
-    }
-
-    let userHTML = "";
-    for (const k in userAns) {
-      userHTML += `<b>[${k}]</b> ${userAns[k]}<br>`;
-    }
-
-    html += `
-      <tr>
-        <td>${q.word}</td>
-        <td>${correctHTML}</td>
-        <td>${userHTML}</td>
-        <td>${isCorrect ? "⭕" : "❌"}</td>
-      </tr>
-    `;
-  });
-
-  html += `</table>`;
-  document.getElementById("setResult").innerHTML = html;
-
-  document.getElementById("checkSetBtn").classList.add("hidden");
-  document.getElementById("nextSetBtn").classList.remove("hidden");
-}
-
-/* ---------------------------------------
-   다음 세트로 이동
-----------------------------------------*/
-function nextSet() {
-  const setSize = quizAmount === "10" ? 10 : quizList.length;
-
-  quizIndex += setSize;
-
-  if (quizIndex >= quizList.length) {
-    showFinalSummary();
-  } else {
-    renderSetQuestions();
-  }
-}
-
-/* ---------------------------------------
-   최종 요약표
-----------------------------------------*/
-function showFinalSummary() {
+/* ============================================================
+   최종 결과 화면
+============================================================ */
+function showFinal() {
   const score = resultLog.filter((r) => r.correct).length;
 
   let html = `
     <h2>퀴즈 종료</h2>
-    <p>총 점수: <b>${score}</b> / ${resultLog.length}</p>
+    <p>총 점수: ${score} / ${resultLog.length}</p>
 
     <table>
-      <tr>
-        <th>단어</th>
-        <th>품사별 정답</th>
-        <th>내 답</th>
-        <th>결과</th>
-      </tr>
+      <tr><th>단어</th><th>정답</th><th>내 답</th><th>결과</th></tr>
   `;
 
   resultLog.forEach((r) => {
     let correctHTML = "";
-    for (const t in r.types) {
+    for (const t in r.types)
       correctHTML += `[${t}] ${r.types[t].join(", ")}<br>`;
-    }
 
     let userHTML = "";
-    for (const k in r.user) {
-      userHTML += `<b>[${k}]</b> ${r.user[k]}<br>`;
-    }
+    for (const t in r.user) userHTML += `<b>[${t}]</b> ${r.user[t]}<br>`;
 
     html += `
       <tr>
@@ -856,15 +544,16 @@ function showFinalSummary() {
 
   html += `</table>
     <hr>
-    <button id="backBtn">← 단어 생성기로 돌아가기</button>
+    <button id="btnBack">← 단어 생성기로 돌아가기</button>
   `;
 
   document.getElementById("app").innerHTML = html;
-
-  document.getElementById("backBtn").onclick = renderBuilder;
+  document.getElementById("btnBack").onclick = renderBuilder;
 }
 
-/* ---------------------------------------
+/* ============================================================
    초기 실행
-----------------------------------------*/
+============================================================ */
+loadWords();
+loadOptions();
 renderBuilder();
