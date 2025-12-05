@@ -4,6 +4,7 @@
   --box: #f1f1f1;
   --border: #ccc;
   --accent: #4c7fff;
+  --bu: #3b3737;
 }
 
 body.dark {
@@ -12,6 +13,7 @@ body.dark {
   --box: #1d1d1d;
   --border: #444;
   --accent: #6ea0ff;
+  --bu: #ffffff;
 }
 
 body {
@@ -73,6 +75,7 @@ th {
   background: var(--box);
 }
 
+/* 🎨 테마 토글 버튼 스타일 수정 */
 .theme-toggle {
   position: fixed;
   top: 14px;
@@ -80,6 +83,10 @@ th {
   padding: 8px 12px;
   font-size: 14px;
   border-radius: 20px;
+  /* 라이트 모드: 배경 var(--text)(어둡게), 글자 var(--bg)(밝게) */
+  background: var(--bu);
+  color: var(--bu);
+  border: 1px solid var(--bu);
 }
 
 .option-group {
@@ -112,6 +119,10 @@ th {
 .option-item.multiline {
   flex-direction: column;
   align-items: flex-start;
+}
+
+input {
+  width: 50%;
 }
 
 .option-item input {

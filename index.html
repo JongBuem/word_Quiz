@@ -10,6 +10,35 @@
     <link rel="stylesheet" href="style.css" />
 
     <script>
+      // 🌓 다크/라이트 모드 기능 추가
+      function applyTheme(theme) {
+        document.body.className = theme;
+        localStorage.setItem("theme", theme);
+        const toggleBtn = document.getElementById("themeToggle");
+        if (toggleBtn) {
+          if (theme === "dark") {
+            toggleBtn.innerHTML = "☀️";
+          } else {
+            toggleBtn.innerHTML = "🌙";
+          }
+        }
+      }
+
+      // 페이지 로드 시 저장된 테마 적용
+      window.addEventListener("DOMContentLoaded", () => {
+        const savedTheme = localStorage.getItem("theme") || "light";
+        applyTheme(savedTheme);
+
+        const toggleBtn = document.getElementById("themeToggle");
+        if (toggleBtn) {
+          toggleBtn.onclick = () => {
+            const currentTheme = document.body.className;
+            const newTheme = currentTheme === "light" ? "dark" : "light";
+            applyTheme(newTheme);
+          };
+        }
+      });
+
       // PWA Service Worker 등록
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
@@ -20,7 +49,6 @@
   </head>
 
   <body class="light">
-    <!-- 테마 토글 -->
     <button id="themeToggle" class="theme-toggle" style="display: flex">
       🌙 다크
     </button>
