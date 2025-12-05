@@ -34,9 +34,19 @@ function normalize(str) {
 }
 
 /* ---------------------------------------
-   단어 UI 렌더링 (스타일 개선)
+   단어 UI 렌더링 (옵션 저장/불러오기 포함)
 ----------------------------------------*/
 function renderBuilder() {
+  /* 🔵 저장된 퀴즈 옵션 불러오기 */
+  const savedMode = localStorage.getItem("quizModeSaved");
+  const savedJudge = localStorage.getItem("judgeModeSaved");
+  const savedAmount = localStorage.getItem("quizAmountSaved");
+
+  if (savedMode) quizMode = savedMode;
+  if (savedJudge) judgeMode = savedJudge;
+  if (savedAmount) quizAmount = savedAmount;
+
+  /* 🔵 UI 렌더링 */
   document.getElementById("app").innerHTML = `
     <h2>단어 입력</h2>
 
@@ -111,11 +121,11 @@ function renderBuilder() {
 
     <!-- 입력 방식 -->
     <div class="option-group">
-    <div class="option-title">입력 방식</div>
-    
-    <label class="option-item">
-      <input type="radio" name="mode" value="single">
-      입력창 1개
+      <div class="option-title">입력 방식</div>
+      
+      <label class="option-item">
+        <input type="radio" name="mode" value="single">
+        입력창 1개
       </label>
 
       <label class="option-item">
@@ -143,7 +153,20 @@ function renderBuilder() {
     <button id="startQuizBtn" style="margin-top:20px">👉 퀴즈 시작</button>
   `;
 
-  /* 기존 기능 그대로 유지 */
+  /* 🔵 불러온 옵션을 UI에 반영 */
+  document.getElementById("quizAmountSel").value = quizAmount;
+
+  const modeEl = document.querySelector(
+    `input[name="mode"][value="${quizMode}"]`
+  );
+  if (modeEl) modeEl.checked = true;
+
+  const judgeEl = document.querySelector(
+    `input[name="judge"][value="${judgeMode}"]`
+  );
+  if (judgeEl) judgeEl.checked = true;
+
+  /* 🔵 기존 기능 그대로 유지 */
   renderWordTable();
   renderJSON();
 
@@ -151,18 +174,26 @@ function renderBuilder() {
   document.getElementById("clearWordsBtn").onclick = clearWords;
   document.getElementById("copyJsonBtn").onclick = copyJSON;
   document.getElementById("importJsonBtn").onclick = importJSON;
-
   document.getElementById("startQuizBtn").onclick = startQuiz;
 
-  document.getElementById("quizAmountSel").onchange = (e) =>
-    (quizAmount = e.target.value);
+  /* 🔵 옵션 바꿀 때마다 저장 */
+  document.getElementById("quizAmountSel").onchange = (e) => {
+    quizAmount = e.target.value;
+    localStorage.setItem("quizAmountSaved", quizAmount);
+  };
 
   document.querySelectorAll("input[name='mode']").forEach((r) => {
-    r.onchange = () => (quizMode = r.value);
+    r.onchange = () => {
+      quizMode = r.value;
+      localStorage.setItem("quizModeSaved", quizMode);
+    };
   });
 
   document.querySelectorAll("input[name='judge']").forEach((r) => {
-    r.onchange = () => (judgeMode = r.value);
+    r.onchange = () => {
+      judgeMode = r.value;
+      localStorage.setItem("judgeModeSaved", judgeMode);
+    };
   });
 }
 
@@ -339,6 +370,7 @@ function shuffle(arr) {
    퀴즈 시작
 ----------------------------------------*/
 function startQuiz() {
+  saveQuizOptions();
   if (wordList.length === 0) {
     alert("단어가 없습니다!");
     return;
@@ -361,6 +393,12 @@ function startQuiz() {
   } else {
     startSetMode();
   }
+}
+
+function saveQuizOptions() {
+  localStorage.setItem("quizModeSaved", quizMode);
+  localStorage.setItem("judgeModeSaved", judgeMode);
+  localStorage.setItem("quizAmountSaved", quizAmount);
 }
 
 /* ---------------------------------------
