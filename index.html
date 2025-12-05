@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>단어 생성기 + 퀴즈 (PWA)</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link rel="manifest" href="manifest.json" />
+    <link rel="stylesheet" href="style.css" />
+
+    <script>
+      // PWA Service Worker 등록
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("sw.js");
+        });
+      }
+    </script>
+  </head>
+
+  <body class="light">
+    <!-- 테마 토글 -->
+    <button id="themeToggle" class="theme-toggle" style="display: flex">
+      🌙 다크
+    </button>
+
+    <h1 class="title">📚 단어 생성기 + 퀴즈</h1>
+
+    <div id="app"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

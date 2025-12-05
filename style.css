@@ -1,0 +1,125 @@
+:root {
+  --bg: #ffffff;
+  --text: #222;
+  --box: #f1f1f1;
+  --border: #ccc;
+  --accent: #4c7fff;
+}
+
+body.dark {
+  --bg: #111;
+  --text: #f1f1f1;
+  --box: #1d1d1d;
+  --border: #444;
+  --accent: #6ea0ff;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Pretendard", sans-serif;
+  padding: 20px;
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 10px;
+  margin: 6px 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--box);
+  color: var(--text);
+}
+
+button {
+  padding: 10px 14px;
+  margin: 6px 0;
+  border: none;
+  cursor: pointer;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 6px;
+  font-size: 15px;
+}
+
+button:active {
+  opacity: 0.8;
+}
+
+.hidden {
+  display: none;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+th,
+td {
+  border: 1px solid var(--border);
+  padding: 8px;
+}
+
+th {
+  background: var(--box);
+}
+
+.theme-toggle {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  padding: 8px 12px;
+  font-size: 14px;
+  border-radius: 20px;
+}
+
+.option-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.option-title {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+}
+
+.option-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+}
+
+.option-item.multiline {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.option-item input {
+  width: 10%;
+  padding: 10px;
+  margin: 6px 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--box);
+  color: var(--text);
+}

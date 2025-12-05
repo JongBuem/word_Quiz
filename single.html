@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <!-- 입력 방식 -->
+    <div class="option-group">
+      <div class="option-title">입력 방식</div>
+
+      <label class="option-item">
+        <input type="radio" name="mode" value="single" checked />
+        입력창 1개
+      </label>
+
+      <label class="option-item">
+        <input type="radio" name="mode" value="byType" />
+        품사별 입력창
+      </label>
+    </div>
+
+    <!-- 정답 정책 -->
+    <div class="option-group">
+      <div class="option-title">정답 정책</div>
+
+      <label class="option-item">
+        <input type="radio" name="judge" value="all" checked />
+        입력한 모든 뜻이 정답일 때 정답
+      </label>
+
+      <label class="option-item">
+        <input type="radio" name="judge" value="any" />
+        입력한 답 중 하나라도 맞으면 정답
+        <br /><small style="color: var(--text-light)"
+          >※ 틀린 답 포함 시 오답</small
+        >
+      </label>
+    </div>
+  </body>
+</html>
